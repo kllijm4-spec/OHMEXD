@@ -1,0 +1,279 @@
+--// OHM-EXD (GOD OF WAR - SUPREME CLEAN: CYAN BLUE EDITION)
+--// HARD FILTER: บล็อกเสียงขยะถาวร (เดิน/รถ/ล้อ/ลม)
+--// ทุกอย่างห้ามหาย: Intro, ปุ่ม GG UBN RTX, แจ้งเตือนข้าง, ฟันเฟือง
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+-- [Global Settings]
+local Tracer_Color = Color3.fromRGB(0, 195, 255)
+local ID_Label_Color = Color3.fromRGB(0, 195, 255)
+local RGB_Tracer, RGB_ID = false, false
+local botGuardianActive = false
+local aiDetectActive = false
+local deepBypassActive = false
+
+-- ================== 🎬 NEW INTRO (MODERN CARD & PROFILE LOADING) ==================
+local introGui = Instance.new("ScreenGui", player.PlayerGui)
+introGui.IgnoreGuiInset = true
+
+local introBg = Instance.new("Frame", introGui)
+introBg.Size = UDim2.new(1, 0, 1, 0)
+introBg.BackgroundColor3 = Color3.fromRGB(5, 10, 15)
+introBg.BackgroundTransparency = 0.3
+
+-- กรอบสี่เหลี่ยมตรงกลาง
+local card = Instance.new("Frame", introBg)
+card.Size = UDim2.new(0, 380, 0, 240)
+card.Position = UDim2.new(0.5, -190, 0.5, -120)
+card.BackgroundColor3 = Color3.fromRGB(10, 25, 45)
+card.BorderColor3 = Color3.fromRGB(0, 195, 255)
+card.BorderSizePixel = 2
+card.ClipsDescendants = true
+Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
+
+-- UIGradient สีฟ้าเข้ม-อ่อน
+local gradient = Instance.new("UIGradient", card)
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 35, 65)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 15, 30))
+})
+gradient.Rotation = 45
+
+-- รูปโปรไฟล์ผู้เล่น
+local pImg = Instance.new("ImageLabel", card)
+pImg.Size = UDim2.new(0, 70, 0, 70)
+pImg.Position = UDim2.new(0.5, -35, 0.15, 0)
+pImg.BackgroundTransparency = 1
+pImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+Instance.new("UICorner", pImg).CornerRadius = UDim.new(1, 0)
+
+local pStroke = Instance.new("UIStroke", pImg)
+pStroke.Color = Color3.fromRGB(0, 195, 255)
+pStroke.Thickness = 2
+
+-- ชื่อผู้เล่น
+local nameLbl = Instance.new("TextLabel", card)
+nameLbl.Size = UDim2.new(1, 0, 0, 25)
+nameLbl.Position = UDim2.new(0, 0, 0.52, 0)
+nameLbl.BackgroundTransparency = 1
+nameLbl.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+nameLbl.TextColor3 = Color3.fromRGB(220, 245, 255)
+nameLbl.TextSize = 16
+nameLbl.Font = Enum.Font.SourceSansBold
+
+-- หลอดโหลดสคริปต์ (Loading Bar)
+local loadBg = Instance.new("Frame", card)
+loadBg.Size = UDim2.new(0.8, 0, 0, 8)
+loadBg.Position = UDim2.new(0.1, 0, 0.72, 0)
+loadBg.BackgroundColor3 = Color3.fromRGB(15, 30, 50)
+Instance.new("UICorner", loadBg)
+
+local loadFill = Instance.new("Frame", loadBg)
+loadFill.Size = UDim2.new(0, 0, 1, 0)
+loadFill.BackgroundColor3 = Color3.fromRGB(0, 195, 255)
+Instance.new("UICorner", loadFill)
+
+local loadText = Instance.new("TextLabel", card)
+loadText.Size = UDim2.new(1, 0, 0, 20)
+loadText.Position = UDim2.new(0, 0, 0.8, 0)
+loadText.BackgroundTransparency = 1
+loadText.Text = "Loading Supreme System..."
+loadText.TextColor3 = Color3.fromRGB(0, 195, 255)
+loadText.TextSize = 13
+loadText.Font = Enum.Font.Code
+
+-- Animation โหลดดิ้ง
+task.spawn(function()
+    TweenService:Create(loadFill, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+    task.wait(2)
+    loadText.Text = "SYSTEM READY!"
+    task.wait(0.5)
+    TweenService:Create(card, TweenInfo.new(0.5), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+    TweenService:Create(introBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    task.wait(0.5)
+    introGui:Destroy()
+    
+    -- โหลดระบบหลักอัตโนมัติหลัง Intro จบ
+    fireGodSystem()
+end)
+
+-- ================== 🔥 GOD SYSTEM ACTIVE ==================
+function fireGodSystem()
+    local scanning, espEnabled = false, false
+    local saved, seen, espList, tracers = {}, {}, {}, {}
+    local gui = Instance.new("ScreenGui", player.PlayerGui)
+
+    -- [🧠 ระบบแจ้งเตือนด้านข้าง - โทนฟ้าเรียบหรู]
+    local function notifySide(msg, title, col)
+        local nF = Instance.new("Frame", gui); nF.Size = UDim2.new(0,280,0,75); nF.Position = UDim2.new(1,50,0.25,0); nF.BackgroundColor3 = Color3.fromRGB(10, 20, 35); nF.BackgroundTransparency = 0.2; nF.BorderColor3 = col or Color3.fromRGB(0, 195, 255); nF.BorderSizePixel = 1; Instance.new("UICorner", nF)
+        local tL = Instance.new("TextLabel", nF); tL.Text = "🚨 "..title; tL.Size = UDim2.new(1,0,0,25); tL.TextColor3 = col or Color3.fromRGB(0, 195, 255); tL.BackgroundTransparency = 1; tL.TextScaled = true; tL.Font = Enum.Font.SourceSansBold
+        local mL = Instance.new("TextLabel", nF); mL.Text = msg; mL.Position = UDim2.new(0,0,0.35,0); mL.Size = UDim2.new(1,0,0,45); mL.TextColor3 = Color3.fromRGB(220, 245, 255); mL.BackgroundTransparency = 1; mL.TextScaled = true
+        nF:TweenPosition(UDim2.new(1,-300,0.25,0), "Out", "Back", 0.5, true); task.delay(4, function() if nF then nF:TweenPosition(UDim2.new(1,50,0.25,0), "In", "Quart", 0.5, true); task.wait(0.6); nF:Destroy() end end)
+    end
+
+    -- [UI มหาเทพ (พื้นหลังธีมรูปภาพ 97454220361065)]
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0,650,0,380)
+    frame.Position = UDim2.new(0.5,-325,0.5,-190)
+    frame.BackgroundColor3 = Color3.fromRGB(10, 18, 30)
+    frame.BackgroundTransparency = 0.1
+    frame.BorderColor3 = Color3.fromRGB(0, 195, 255)
+    frame.BorderSizePixel = 1
+    frame.Visible = true
+    frame.ClipsDescendants = true
+    Instance.new("UICorner", frame)
+
+    -- รูปพื้นหลัง UI แก้ไข ID เป็น 97454220361065
+    local bgImg = Instance.new("ImageLabel", frame)
+    bgImg.Size = UDim2.new(1, 0, 1, 0)
+    bgImg.Image = "http://www.roblox.com/asset/?id=97454220361065"
+    bgImg.BackgroundTransparency = 1
+    bgImg.ImageTransparency = 0.35
+    bgImg.ScaleType = Enum.ScaleType.Crop
+
+    -- [ระบบ Drag เลื่อน UI ได้]
+    local dragging, dragInput, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    local scroll = Instance.new("ScrollingFrame", frame); scroll.Size = UDim2.new(0,190,0,340); scroll.Position = UDim2.new(0,12,0,20); scroll.BackgroundTransparency = 1; scroll.CanvasSize = UDim2.new(0,0,0,620); scroll.ScrollBarThickness = 3
+    local logBox = Instance.new("TextBox", frame); logBox.Size = UDim2.new(0,420,0,340); logBox.Position = UDim2.new(0,215,0,20); logBox.MultiLine = true; logBox.Text = "--- OHM WARFARE SUPREME LOG ---"; logBox.TextColor3 = Color3.fromRGB(100, 220, 255); logBox.BackgroundColor3 = Color3.fromRGB(5, 10, 18); logBox.BackgroundTransparency = 0.3; logBox.BorderColor3 = Color3.fromRGB(0, 100, 150); logBox.TextYAlignment = Enum.TextYAlignment.Top; logBox.TextEditable = false; Instance.new("UICorner", logBox)
+
+    local function createBtn(txt, y, cb)
+        local b = Instance.new("TextButton", scroll); b.Size = UDim2.new(0,175,0,38); b.Position = UDim2.new(0,0,0,y); b.Text = txt; b.BackgroundColor3 = Color3.fromRGB(15, 35, 55); b.BackgroundTransparency = 0.3; b.TextColor3 = Color3.fromRGB(0, 220, 255); b.Font = Enum.Font.SourceSansBold; Instance.new("UICorner", b); b.MouseButton1Click:Connect(cb); return b
+    end
+
+    createBtn("🎧 เริ่มดูดเพลง (Turbo)", 0, function() scanning = not scanning; notifySide(scanning and "On" or "Off", "SCANNER") end)
+    createBtn("⚡ เจาะไอดีจริง (Bypass)", 45, function() deepBypassActive = not deepBypassActive; notifySide(deepBypassActive and "Bypass On" or "Off", "DEEP BYPASS") end)
+    createBtn("📡 EPS ฟ้ามหาเทพ", 90, function() espEnabled = not espEnabled; notifySide("EPS Blue On", "VISUAL") end)
+    createBtn("🛡️ บอทตรวจคนเปิดเพลง", 135, function() aiDetectActive = not aiDetectActive; notifySide("โหมดตรวจจับ On", "HACKER ALERT") end)
+    createBtn("🎭 ปลอม ID กวนประสาท", 180, function() botGuardianActive = not botGuardianActive; notifySide("ส่งไอดีปลอม On", "PHANTOM") end)
+    createBtn("📋 คัดลอกไอดีทั้งหมด", 225, function() if setclipboard then setclipboard(logBox.Text) notifySide("คัดลอกลง Clipboard แล้ว", "COPY") end end)
+    createBtn("🗑 ล้างค่า Log", 270, function() seen = {}; saved = {}; logBox.Text = "--- LOG CLEARED ---" end)
+    
+    -- [⚙️ ปุ่มฟันเฟืองตั้งค่าสี]
+    local setBtn = createBtn("⚙️ ตั้งค่าสี / RGB", 315, function() end)
+    local sFrame = Instance.new("ScrollingFrame", gui); sFrame.Size = UDim2.new(0,210,0,220); sFrame.Position = UDim2.new(0.7,0,0.3,0); sFrame.Visible = false; sFrame.BackgroundColor3 = Color3.fromRGB(10, 20, 35); sFrame.BackgroundTransparency = 0.2; sFrame.BorderColor3 = Color3.fromRGB(0, 195, 255); sFrame.CanvasSize = UDim2.new(0,0,0,320); Instance.new("UICorner", sFrame)
+    setBtn.MouseButton1Click:Connect(function() sFrame.Visible = not sFrame.Visible end)
+    
+    local function makeSetBtn(txt, y, cb)
+        local b = Instance.new("TextButton", sFrame); b.Size = UDim2.new(0,170,0,32); b.Position = UDim2.new(0,15,0,y); b.Text = txt; b.BackgroundColor3 = Color3.fromRGB(20, 45, 70); b.BackgroundTransparency = 0.3; b.TextColor3 = Color3.fromRGB(255,255,255); Instance.new("UICorner", b); b.MouseButton1Click:Connect(cb)
+    end
+    makeSetBtn("🌈 Tracer RGB", 10, function() RGB_Tracer = not RGB_Tracer end)
+    makeSetBtn("🌈 ID RGB", 50, function() RGB_ID = not RGB_ID end)
+    makeSetBtn("🔵 Reset Cyan Blue", 90, function() Tracer_Color = Color3.fromRGB(0, 195, 255); ID_Label_Color = Color3.fromRGB(0, 195, 255); RGB_Tracer, RGB_ID = false, false end)
+
+    -- [📡 CORE SYSTEM: HARD TRASH FILTER]
+    RunService.RenderStepped:Connect(function()
+        if RGB_Tracer then Tracer_Color = Color3.fromHSV(tick()%5/5,1,1) end
+        if RGB_ID then ID_Label_Color = Color3.fromHSV(tick()%5/5,1,1) end
+        for _,v in pairs(espList) do v:Destroy() end espList = {}
+        for _,v in pairs(tracers) do v:Remove() end tracers = {}
+
+        for _, p in pairs(Players:GetPlayers()) do
+            pcall(function()
+                if p.Character and p.Character:FindFirstChild("Head") then
+                    local s = nil
+                    for _, v in pairs(p.Character:GetDescendants()) do
+                        if v:IsA("Sound") and v.IsPlaying then
+                            local n = v.Name:lower()
+                            -- [🚫 ระบบ Hard Filter กรองขยะ 100%]
+                            local isTrash = n:find("step") or n:find("walk") or n:find("run") or n:find("engine") or n:find("car") or n:find("wheel") or n:find("drive") or n:find("skate") or n:find("ambient") or n:find("wind") or n:find("rain") or n:find("bird") or v.TimeLength < 5
+                            if not isTrash then 
+                                s = v; break 
+                            end
+                        end
+                    end
+
+                    if s then
+                        local rid = s.SoundId:match("%d+")
+                        if deepBypassActive then
+                            local ra = s:GetAttribute("SoundId") or s:GetAttribute("RealID")
+                            if ra then rid = tostring(ra):match("%d+") end
+                        end
+                        local did = rid
+                        if p == player and botGuardianActive then did = tostring(math.random(111111,999999)).." (FAKE)" end
+
+                        if aiDetectActive and p ~= player then
+                            if (s:GetAttribute("IsFromScript") or s.Name == "Sound") and not seen[p.Name.."_a"] then
+                                seen[p.Name.."_a"] = true; notifySide("มีคนกำลังเปิดเพลง/ใช้สคริปต์: "..p.Name, "พบคนรันสคริปต์", Color3.fromRGB(0, 195, 255))
+                                task.delay(10, function() seen[p.Name.."_a"] = nil end)
+                            end
+                        end
+
+                        if scanning and rid and not seen[rid] then
+                            seen[rid] = true; table.insert(saved, "🎵 "..s.Name.." | ID: "..rid); logBox.Text = table.concat(saved, "\n")
+                        end
+
+                        if espEnabled then
+                            local b = Instance.new("BillboardGui", p.Character.Head); b.Size = UDim2.new(0,200,0,70); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0,3,0)
+                            local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1,0,1,0); t.BackgroundTransparency = 1; t.Text = "👤 "..p.Name.."\n🆔 "..did; t.TextColor3 = ID_Label_Color; t.TextScaled = true; table.insert(espList, b)
+                            local pos, vis = Camera:WorldToViewportPoint(p.Character.Head.Position)
+                            if vis and p ~= player then
+                                local l = Drawing.new("Line"); l.Visible = true; l.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y); l.To = Vector2.new(pos.X, pos.Y); l.Color = Tracer_Color; l.Thickness = 1.5; table.insert(tracers, l)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+
+    -- [🔘 ปุ่มเปิด-ปิด UI: ไอดีรูปภาพ 100716307006412 + กรอบสีฟ้าเข้ม]
+    local openBtn = Instance.new("ImageButton", gui)
+    openBtn.Size = UDim2.new(0, 55, 0, 55)
+    openBtn.Position = UDim2.new(0, 20, 0, 200)
+    openBtn.Image = "http://www.roblox.com/asset/?id=100716307006412"
+    openBtn.BackgroundColor3 = Color3.fromRGB(5, 15, 30)
+    openBtn.BackgroundTransparency = 0.1
+    openBtn.Visible = false
+    Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 12)
+
+    local openStroke = Instance.new("UIStroke", openBtn)
+    openStroke.Color = Color3.fromRGB(0, 120, 200) -- สีฟ้าเข้ม
+    openStroke.Thickness = 2.5
+
+    openBtn.MouseButton1Click:Connect(function() 
+        frame.Visible = true
+        openBtn.Visible = false 
+    end)
+
+    local close = Instance.new("TextButton", frame)
+    close.Size = UDim2.new(0,25,0,25)
+    close.Position = UDim2.new(1,-30,0,5)
+    close.Text = "✕"
+    close.TextColor3 = Color3.fromRGB(255, 80, 80)
+    close.BackgroundTransparency = 1
+    close.Font = Enum.Font.SourceSansBold
+    close.TextSize = 18
+    close.MouseButton1Click:Connect(function() 
+        frame.Visible = false
+        openBtn.Visible = true 
+    end)
+end
